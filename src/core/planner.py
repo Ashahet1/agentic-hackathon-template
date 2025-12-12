@@ -1,8 +1,19 @@
 """
-Task Planning Module for Ocean Plastic Sentinel.
+Task Planning Module for Ocean Plastic Sentinel
 
-This module handles strategic planning, task decomposition, and workflow
-orchestration for marine debris detection and cleanup operations.
+This module acts as the strategic brain of the ocean cleanup system. It takes high-level
+mission requests (like "find plastic debris in the Pacific Gyre") and breaks them down
+into specific, executable tasks that can be performed by the system.
+
+Think of it as a mission commander that:
+- Analyzes what needs to be done based on the target area and urgency
+- Creates a step-by-step plan with satellite data collection, analysis, and prediction tasks
+- Schedules tasks based on priority and resource availability
+- Handles different mission types (emergency cleanup vs routine monitoring)
+- Plans for contingencies when things don't go as expected
+
+The planner ensures the system works efficiently by organizing tasks in the right order,
+allocating computational resources wisely, and adapting strategies based on mission requirements.
 """
 import logging
 import asyncio
@@ -19,45 +30,72 @@ logger = logging.getLogger(__name__)
 
 
 class TaskType(Enum):
-    """Enumeration of available task types."""
-    SATELLITE_DETECTION = "satellite_detection"
-    DRIFT_PREDICTION = "drift_prediction"
-    ROUTE_OPTIMIZATION = "route_optimization"
-    VALIDATION = "validation"
-    DATA_COLLECTION = "data_collection"
+    """
+    Types of tasks the system can perform for ocean cleanup operations.
+    
+    Each task type represents a specific capability that contributes to the overall
+    goal of finding and intercepting marine plastic debris efficiently.
+    """
+    SATELLITE_DETECTION = "satellite_detection"      # Analyze satellite images to spot plastic debris
+    DRIFT_PREDICTION = "drift_prediction"            # Calculate where debris will move based on currents
+    ROUTE_OPTIMIZATION = "route_optimization"        # Find the best path for cleanup vessels
+    VALIDATION = "validation"                        # Check if previous predictions were accurate
+    DATA_COLLECTION = "data_collection"              # Gather satellite images and ocean data
 
 
 class TaskPriority(Enum):
-    """Task priority levels for execution scheduling."""
-    CRITICAL = 1    # Immediate execution required
-    HIGH = 2        # Execute within 1 hour
-    NORMAL = 3      # Execute within 4 hours
-    LOW = 4         # Execute when resources available
+    """
+    Priority levels that determine how quickly tasks need to be executed.
+    
+    In ocean cleanup operations, timing matters - debris moves with currents,
+    weather windows change, and cleanup vessels have limited operational time.
+    """
+    CRITICAL = 1    # Emergency situations: large spill, vessel in distress, immediate threat
+    HIGH = 2        # Time-sensitive: optimal weather window, vessel already deployed
+    NORMAL = 3      # Standard operations: routine monitoring, planned cleanup missions
+    LOW = 4         # Background tasks: validation, learning, system maintenance
 
 
 @dataclass
 class Task:
-    """Individual task representation."""
+    """
+    Represents a single executable task in the ocean cleanup workflow.
     
-    task_id: str
-    task_type: TaskType
-    priority: TaskPriority
-    parameters: Dict[str, Any]
-    dependencies: List[str] = field(default_factory=list)
-    estimated_duration_seconds: int = 300  # Default 5 minutes
-    resource_requirements: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    scheduled_for: Optional[datetime] = None
+    Each task is like a work order that tells the system exactly what to do,
+    when to do it, and what resources it needs. For example:
+    - "Analyze satellite image of coordinates 36.5°N, 125°W for plastic debris"
+    - "Calculate drift prediction for detected debris over next 48 hours"
+    - "Optimize route for cleanup vessel from Port A to intercept debris"
+    
+    Tasks have dependencies (some must complete before others can start) and
+    resource requirements (API calls, memory, processing time).
+    """
+    
+    task_id: str                                      # Unique identifier like "mission_123_detection"
+    task_type: TaskType                               # What kind of work this task performs
+    priority: TaskPriority                            # How urgent this task is
+    parameters: Dict[str, Any]                        # Specific instructions (coordinates, thresholds, etc)
+    dependencies: List[str] = field(default_factory=list)  # Tasks that must complete first
+    estimated_duration_seconds: int = 300            # How long we expect this to take (5 min default)
+    resource_requirements: Dict[str, Any] = field(default_factory=dict)  # CPU, memory, API quota needed
+    created_at: datetime = field(default_factory=datetime.utcnow)  # When this task was created
+    scheduled_for: Optional[datetime] = None          # When this task should execute
     
     def __post_init__(self):
-        """Post-initialization processing."""
+        """
+        Automatically schedule the task based on its priority level.
+        
+        This mimics real-world triage: emergency tasks get immediate attention,
+        while routine tasks can wait for available resources. The delays prevent
+        system overload and allow for proper resource allocation.
+        """
         if self.scheduled_for is None:
-            # Schedule based on priority
+            # Different priorities get different scheduling delays to manage system load
             delay_minutes = {
-                TaskPriority.CRITICAL: 0,
-                TaskPriority.HIGH: 5,
-                TaskPriority.NORMAL: 15,
-                TaskPriority.LOW: 60
+                TaskPriority.CRITICAL: 0,      # Execute immediately - could be a vessel in distress
+                TaskPriority.HIGH: 5,          # Small delay to batch with other urgent tasks
+                TaskPriority.NORMAL: 15,       # Wait for current high-priority work to finish
+                TaskPriority.LOW: 60           # Execute during low-traffic periods
             }
             self.scheduled_for = self.created_at + timedelta(
                 minutes=delay_minutes[self.priority]
@@ -66,67 +104,100 @@ class Task:
 
 @dataclass 
 class ExecutionPlan:
-    """Complete execution plan for a mission."""
+    """
+    Complete blueprint for executing an ocean cleanup mission.
     
-    plan_id: str
-    mission_id: str
-    tasks: List[Task]
-    execution_order: List[str]  # Task IDs in execution order
-    total_estimated_duration: int
-    resource_allocation: Dict[str, Any]
-    contingency_plans: List[Dict[str, Any]] = field(default_factory=list)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    This is like a detailed project plan that breaks down the entire mission
+    into manageable steps, schedules them efficiently, and prepares for things
+    that might go wrong. It ensures the mission runs smoothly from start to finish.
+    
+    Example workflow:
+    1. Collect satellite data for target region
+    2. Analyze images to detect plastic debris  
+    3. Calculate drift predictions based on ocean currents
+    4. Optimize vessel routes to intercept debris
+    5. Generate final cleanup recommendations
+    """
+    
+    plan_id: str                                      # Unique plan identifier
+    mission_id: str                                   # Links back to the original mission request
+    tasks: List[Task]                                 # All tasks needed to complete the mission
+    execution_order: List[str]                        # Task IDs in the order they should run
+    total_estimated_duration: int                     # Expected time to complete entire mission
+    resource_allocation: Dict[str, Any]               # CPU, memory, API quotas reserved for this plan
+    contingency_plans: List[Dict[str, Any]] = field(default_factory=list)  # Backup plans if things fail
+    created_at: datetime = field(default_factory=datetime.utcnow)  # When this plan was created
 
 
 class TaskPlanner:
     """
-    Strategic task planner for Ocean Plastic Sentinel operations.
+    The strategic brain that figures out how to execute ocean cleanup missions efficiently.
     
-    This class analyzes mission requirements, decomposes them into executable
-    tasks, and creates optimized execution plans considering resource constraints
-    and dependencies.
+    When you ask the system "find plastic debris in this area and tell me where vessels
+    should go to clean it up," this planner breaks that down into specific steps:
+    
+    1. What satellite images do we need to download?
+    2. What ocean current data should we fetch?
+    3. In what order should we analyze the data?
+    4. How should we handle the situation if satellite data is unavailable?
+    5. What resources (API calls, memory, processing time) will each step need?
+    
+    The planner is like a project manager that understands both the technical capabilities
+    of the system and the real-world constraints of ocean cleanup operations. It creates
+    detailed execution plans that maximize efficiency while being prepared for failures.
     """
     
     def __init__(self, gemini_client: GeminiAPIClient):
         """
-        Initialize the task planner.
+        Set up the task planner with access to AI analysis capabilities.
+        
+        The planner needs access to Gemini AI for strategic decision-making,
+        like determining if a mission area is too large for standard processing
+        or if weather conditions require urgent task prioritization.
         
         Args:
-            gemini_client: Initialized Gemini API client for strategic analysis
+            gemini_client: Connection to Gemini AI for strategic analysis
         """
         self.gemini_client = gemini_client
         self.is_initialized = False
         
-        # Planning state
+        # Track all active execution plans to prevent conflicts and manage workload
         self.active_plans = {}
+        
+        # Monitor system resource consumption to avoid overloading
         self.resource_usage = {
-            'api_calls_per_hour': 0,
-            'memory_usage_mb': 0,
-            'concurrent_tasks': 0
+            'api_calls_per_hour': 0,      # Track API quota usage
+            'memory_usage_mb': 0,         # Monitor memory consumption
+            'concurrent_tasks': 0         # Count active parallel tasks
         }
         
-        # Strategy templates for common mission types
+        # Pre-built strategies for common mission types - like having templates
+        # for different types of operations instead of planning from scratch each time
         self.strategy_templates = {
-            'standard_detection': self._create_standard_detection_strategy,
-            'urgent_cleanup': self._create_urgent_cleanup_strategy,
-            'validation_sweep': self._create_validation_strategy,
-            'regional_survey': self._create_regional_survey_strategy
+            'standard_detection': self._create_standard_detection_strategy,    # Normal monitoring missions
+            'urgent_cleanup': self._create_urgent_cleanup_strategy,            # Emergency response (oil spill, etc)
+            'validation_sweep': self._create_validation_strategy,              # Check previous predictions
+            'regional_survey': self._create_regional_survey_strategy           # Large area mapping
         }
     
     async def initialize(self) -> bool:
         """
-        Initialize the task planner.
+        Prepare the planner for operation by loading historical data and setting up monitoring.
+        
+        This is like a mission commander reviewing past operations, understanding what
+        strategies worked well, and setting up systems to track current performance.
+        The planner needs this context to make good decisions about how to approach new missions.
         
         Returns:
-            bool: True if initialization successful
+            bool: True if the planner is ready to create mission plans
         """
         try:
             logger.info("Initializing Task Planner...")
             
-            # Initialize planning knowledge base
+            # Load data about past missions to inform planning decisions
             await self._load_planning_knowledge()
             
-            # Set up resource monitoring
+            # Set up systems to monitor resource usage and prevent overload
             await self._initialize_resource_tracking()
             
             self.is_initialized = True
