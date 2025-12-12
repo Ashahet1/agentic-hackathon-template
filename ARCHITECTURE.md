@@ -22,8 +22,8 @@
       │              AGENT WORKFLOW                   │
       │  ┌─────────┐    ┌─────────┐    ┌─────────┐   │
       │  │   1     │───▶│    2    │───▶│    3    │   │
-      │  │ SCOUT   │    │NAVIGATR │    │ CRITIC  │   │
-      │  │ DETECT  │    │PREDICT  │    │VALIDATE │   │
+      │  │PLANNER  │    │EXECUTOR │    │ MEMORY  │   │
+      │  │ DETECT  │    │PREDICT  │    │ LEARN   │   │
       │  └─────────┘    └─────────┘    └─────────┘   │
       │       │              │              │        │
       └───────┼──────────────┼──────────────┼────────┘
@@ -59,37 +59,37 @@
 USER: "Find plastic debris in Pacific Gyre"
   │
   ▼
-PLANNER: Breaks down into sub-tasks:
+PLANNER (planner.py): Breaks down into sub-tasks:
   ├─ Task 1: Scan satellite imagery for debris
   ├─ Task 2: Predict debris movement  
   └─ Task 3: Validate and optimize
   │
   ▼
-EXECUTOR: Coordinates agents in sequence:
+EXECUTOR (executor.py): Coordinates execution sequence:
   │
-  ├─ SCOUT AGENT ─────────────────────────────┐
+  ├─ DETECTION TASK ──────────────────────────┐
   │  ├─ Gets Sentinel-2 imagery               │
   │  ├─ Converts spectral data to text        │
   │  ├─ Asks Gemini: "Analyze this data       │
   │  │   for plastic signatures"              │
   │  └─ Returns: [(lat, lon, confidence)]     │
   │                                           │
-  ├─ NAVIGATOR AGENT ──────────────────────┐  │
-  │  ├─ Takes debris coordinates from Scout│  │
-  │  ├─ Gets NOAA current/wind data       │  │
-  │  ├─ Asks Gemini: "Calculate optimal   │  │
-  │  │   drift prediction and intercept"  │  │
-  │  └─ Returns: [routes, time_windows]   │  │
-  │                                       │  │
-  ├─ CRITIC AGENT ─────────────────────┐  │  │
-  │  ├─ Compares old predictions vs     │  │  │
-  │  │   new satellite observations    │  │  │
-  │  ├─ Asks Gemini: "How accurate     │  │  │
-  │  │   was our prediction?"         │  │  │
-  │  └─ Updates: [coefficients, model] │  │  │
-  │                                    │  │  │
-  └─ MEMORY stores all results ─────────┘  │  │
-     for future context                    │  │
+  ├─ PREDICTION TASK ──────────────────────┐  │
+  │  ├─ Takes debris coordinates from Task 1│  │
+  │  ├─ Gets NOAA current/wind data        │  │
+  │  ├─ Asks Gemini: "Calculate optimal    │  │
+  │  │   drift prediction and intercept"   │  │
+  │  └─ Returns: [routes, time_windows]    │  │
+  │                                        │  │
+  ├─ VALIDATION TASK ──────────────────┐   │  │
+  │  ├─ Compares old predictions vs     │   │  │
+  │  │   new satellite observations    │   │  │
+  │  ├─ Asks Gemini: "How accurate     │   │  │
+  │  │   was our prediction?"          │   │  │
+  │  └─ Updates: [coefficients, model] │   │  │
+  │                                    │   │  │
+  └─ MEMORY (memory.py) stores results ─┘   │  │
+     for future context                     │  │
                                           │  │
 FINAL RESPONSE: ◄─────────────────────────┘  │
   • "Found 3 debris patches"                 │

@@ -11,19 +11,19 @@
    - Priority level (emergency cleanup vs. routine monitoring)
    - Available cleanup vessel information (location, capacity, speed)
 
-2. **Scout Agent: Debris Detection Phase**
+2. **Planner: Detection Planning Phase**
    - Retrieve latest Sentinel-2 satellite imagery for target region
    - Convert multispectral bands (NIR/SWIR) to Gemini-readable RGB pseudo-images
    - Use Gemini vision model to identify plastic debris signatures
    - Generate confidence-scored detection coordinates
 
-3. **Navigator Agent: Drift Prediction Phase**
+3. **Executor: Drift Prediction Phase**
    - Fetch real-time NOAA ocean current and wind data
-   - Apply physics-based drift modeling: `V_drift = α*V_current + β*V_wind`
+   - Apply physics-based drift modeling: $\vec{V}_{drift} = \alpha \cdot \vec{V}_{current} + \beta \cdot \vec{V}_{wind}$
    - Calculate 48-72 hour trajectory predictions for detected debris
    - Optimize intercept routes for available cleanup vessels
 
-4. **Critic Agent: Validation & Learning Phase**
+4. **Memory: Validation & Learning Phase**
    - Compare previous predictions against new satellite observations
    - Calculate prediction accuracy and spatial error margins
    - Update drift coefficients (α, β) based on validation results
@@ -37,43 +37,36 @@
 
 ## 2. Key Modules
 
-### **Scout Agent** (`scout_agent.py`)
-**Purpose**: Plastic debris detection from satellite imagery
-- **Input Processing**: Downloads and preprocesses Sentinel-2 multispectral data
-- **Spectral Analysis**: Converts invisible NIR/SWIR bands to RGB for Gemini processing
-- **Pattern Recognition**: Uses Gemini's vision capabilities to identify plastic signatures
-- **Confidence Scoring**: Assigns probability scores to potential debris patches
-- **Spatial Clustering**: Groups nearby detections into actionable cleanup targets
+### **Planner** (`planner.py`)
+**Purpose**: Task decomposition and strategy planning
+- **Task Analysis**: Breaks down user requests into executable sub-tasks
+- **Detection Planning**: Plans satellite imagery analysis strategies  
+- **Prediction Planning**: Designs drift calculation approaches
+- **Validation Planning**: Schedules accuracy checking and learning cycles
+- **Resource Allocation**: Manages API quotas and computational resources
 
-### **Navigator Agent** (`navigator_agent.py`)  
-**Purpose**: Oceanographic drift prediction and route optimization
-- **Data Fusion**: Combines NOAA ocean currents, wind data, and debris characteristics
-- **Physics Modeling**: Implements drift equations with adaptive coefficient learning
-- **Trajectory Calculation**: Projects debris movement over 24-72 hour windows
-- **Route Optimization**: Calculates fuel-efficient vessel intercept paths
-- **Time Window Analysis**: Determines optimal cleanup scheduling
+### **Executor** (`executor.py`)  
+**Purpose**: Task execution and tool coordination
+- **Detection Execution**: Processes satellite imagery and calls Gemini for analysis
+- **Prediction Execution**: Integrates ocean data with physics modeling
+- **Validation Execution**: Compares predictions against new observations
+- **Tool Management**: Coordinates calls to external APIs (Earth Engine, NOAA)
+- **Result Synthesis**: Combines outputs from all tasks into final response
 
-### **Critic Agent** (`critic_agent.py`)
-**Purpose**: System validation and continuous improvement
-- **Prediction Validation**: Compares forecasts against new satellite observations
-- **Error Analysis**: Calculates spatial/temporal accuracy metrics
-- **Parameter Tuning**: Adjusts detection thresholds and drift coefficients
-- **Learning Integration**: Updates system knowledge based on real-world outcomes
-- **Performance Reporting**: Tracks improvement trends over time
-
-### **Memory System** (`memory_store.py`)
+### **Memory System** (`memory.py`)
 **Purpose**: Context preservation and learning persistence
 - **Short-term Memory**: Active session tracking of detections and predictions
 - **Long-term Memory**: Historical patterns, accuracy data, and learned parameters
-- **Context Retrieval**: Provides relevant background for agent reasoning
+- **Context Retrieval**: Provides relevant background for task execution
 - **Learning Storage**: Maintains coefficient updates and pattern libraries
 
-### **Orchestrator** (`ocean_coordinator.py`)
-**Purpose**: Multi-agent coordination and workflow management
-- **Agent Scheduling**: Coordinates timing between Scout, Navigator, and Critic
-- **Data Flow Management**: Routes information between agents and external APIs
-- **Resource Allocation**: Manages API rate limits and computational resources
-- **Error Handling**: Provides graceful degradation when components fail  
+### **Agent Coordinator** (`agent.py`)
+**Purpose**: Overall system orchestration and user interface
+- **Request Processing**: Handles user inputs and mission parameters
+- **Workflow Management**: Coordinates planner → executor → memory cycles
+- **Response Generation**: Synthesizes final outputs and recommendations
+- **Error Handling**: Provides graceful degradation when components fail
+- **Performance Monitoring**: Tracks system metrics and improvement trends  
 
 ## 3. Tool Integration
 
