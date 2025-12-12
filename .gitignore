@@ -1,0 +1,19 @@
+# Environment variables (contains API keys)
+.env
+
+# Python cache files (auto-generated when you run Python)
+__pycache__/
+
+# Virtual environments (if you create one)
+venv/
+env/
+
+# VS Code settings
+.vscode/
+
+# Database files (agent memory)
+*.db
+*.sqlite3
+
+# Log files
+*.log
