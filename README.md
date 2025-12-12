@@ -28,7 +28,42 @@ The **Ocean Plastic Sentinel** transforms the "needle in a haystack" problem of 
 
 ## 🚀 Getting Started
 
-1. **Clone / Fork** this template.  Very Important. Fork Name MUST be the same name as the teamn name
+### **Quick Installation**
+```bash
+# 1. Clone the repository
+git clone https://github.com/Ashahet1/agentic-hackathon-template.git
+cd agentic-hackathon-template
+
+# 2. Run the setup script
+python setup.py
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Get your Gemini API key from https://ai.google.dev/
+
+# 5. Edit .env file and add your API key
+# GEMINI_API_KEY=your_actual_api_key_here
+
+# 6. Test the installation
+python -m src.test_setup
+
+# 7. Run your first mission
+python -m src.main
+```
+
+### **System Requirements**
+- Python 3.8+ 
+- Internet connection for satellite data and API access
+- 4GB RAM minimum (8GB recommended for large regions)
+- Google Gemini API key (free tier available)
+
+### **Environment Setup**
+The system requires a `.env` file with your API credentials:
+```env
+GEMINI_API_KEY=your_api_key_here
+EARTH_ENGINE_PROJECT=your_project_id_here  # Optional
+```
 
 
 ## 📂 Folder Layout
