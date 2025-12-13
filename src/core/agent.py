@@ -24,13 +24,14 @@ from enum import Enum
 import logging
 import asyncio
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime
 
 from src.config import config
 from src.core.planner import TaskPlanner
 from src.core.executor import TaskExecutor  
 from src.core.memory import MemorySystem
+from src.core.planner import MissionType
 from src.integrations.gemini_client import GeminiAPIClient
 
 
@@ -62,7 +63,7 @@ class MissionRequest:
         requested_by: Originator identification for audit trails
         timestamp: Request creation time for scheduling and timeout handling
     """
-    
+    mission_type: MissionType
     mission_id: str
     target_region: Dict[str, float]  # {'north': lat, 'south': lat, 'east': lon, 'west': lon}
     priority_level: str = 'standard'  # 'urgent', 'standard', 'background'
@@ -70,7 +71,7 @@ class MissionRequest:
     time_window_hours: int = 72  # Prediction horizon for drift modeling
     requested_by: str = 'system'  # Source system or user identification
     timestamp: datetime = None  # Auto-populated request creation timestamp
-    
+    metadata: Dict[str, Any] = field(default_factory=dict)
     def __post_init__(self):
         """Post-initialization validation and timestamp assignment."""
         if self.timestamp is None:
@@ -189,7 +190,7 @@ class OceanPlasticSentinel:
                 return False
             
             # Step 2: Establish Gemini API connection with health check
-            logger.info("Connecting to Gemini 1.5 Pro API...")
+            logger.info("Connecting to Gemini 2.5 Flash.....")
             if not await self.gemini_client.initialize():
                 logger.error("Failed to initialize Gemini API client - check API key and network")
                 return False
@@ -273,19 +274,38 @@ class OceanPlasticSentinel:
             
             # PHASE 3: LEARNING INTEGRATION
             logger.info(f"Phase 3: Learning integration for mission {mission_id}")
-            await self.memory.store_mission_results(mission_id, execution_results)
+
+            # Extract results from execution_results
+            detections = execution_results.get('detections', [])
+            predictions = execution_results.get('predictions', [])
+            routes = execution_results.get('recommended_routes', [])
+            confidence_metrics = execution_results.get('confidence_metrics', {})
+
+            await self.memory.store_mission_results(
+                mission_id=mission_id,
+                results={
+                    'detections': detections,
+                    'predictions': predictions,
+                    'recommended_routes': routes,
+                    'status': 'completed',
+                    'priority_level': request.priority_level,
+                    'target_region': request.target_region,
+                    'confidence_metrics': confidence_metrics
+                }
+            )
+
             learning_updates = await self.memory.update_predictive_models(execution_results)
-            
             # Compile comprehensive mission results
             end_time = datetime.utcnow()
             execution_time = (end_time - start_time).total_seconds()
-            
-            result = MissionResult(
+
+            # Create the final MissionResult
+            return MissionResult(
                 mission_id=mission_id,
-                detections=execution_results.get('detections', []),
-                predictions=execution_results.get('predictions', []),
-                recommended_routes=execution_results.get('routes', []),
-                confidence_metrics=execution_results.get('confidence_metrics', {}),
+                detections=detections,
+                predictions=predictions,
+                recommended_routes=routes,
+                confidence_metrics=confidence_metrics,
                 execution_time_seconds=execution_time,
                 status='completed'
             )

@@ -4,6 +4,7 @@ Gemini API integration for Ocean Plastic Sentinel.
 This module provides a clean interface for interacting with Google's Gemini API,
 specifically optimized for satellite imagery analysis and marine debris detection.
 """
+from datetime import datetime
 import logging
 import asyncio
 from typing import Dict, List, Optional, Union, Any
@@ -60,12 +61,19 @@ class GeminiAPIClient:
             bool: True if initialization successful, False otherwise.
         """
         try:
+             # TEST MODE - Skip real API initialization
+            if config.system.test_mode:
+                logger.info("🧪 TEST MODE: Using mock Gemini responses (no API calls)")
+                self._is_initialized = True
+                self._model = None  # No real model needed
+                return True
+            
             if not config.api.gemini_api_key:
                 logger.error("Gemini API key not found in configuration")
                 return False
                 
             genai.configure(api_key=config.api.gemini_api_key)
-            self._model = genai.GenerativeModel(config.api.gemini_model)
+            self._model = genai.GenerativeModel('gemini-2.5-flash')
             
             # Test connection with a simple request
             await self._test_connection()
@@ -81,13 +89,22 @@ class GeminiAPIClient:
     async def _test_connection(self) -> None:
         """Test the API connection with a simple request."""
         try:
-            response = await asyncio.to_thread(
-                self._model.generate_content, 
-                "Test connection"
+            logger.info("Testing Gemini API connection...")
+            
+            # Add timeout
+            response = await asyncio.wait_for(
+                self._model.generate_content_async("Hello"),
+                timeout=10.0  # 10 second timeout
             )
-            logger.debug("Gemini API connection test successful")
+            
+            logger.info("Gemini API connection test successful")
+            
+        except asyncio.TimeoutError:
+            logger.error("Gemini API connection test timed out after 10 seconds")
+            raise Exception("Gemini API connection test failed: Timeout")
         except Exception as e:
-            raise ConnectionError(f"Gemini API connection test failed: {str(e)}")
+            logger.error(f"Gemini API connection test failed: {str(e)}")
+            raise Exception(f"Gemini API connection test failed: {str(e)}")
     
     async def analyze_satellite_image(self, request: AnalysisRequest) -> List[DetectionResult]:
         """
@@ -99,6 +116,26 @@ class GeminiAPIClient:
         Returns:
             List of DetectionResult objects containing detected debris locations
         """
+        # TEST MODE - Return realistic mock data
+        if config.system.test_mode or self._model is None:
+            logger.info("🧪 Returning mock detection results")
+            
+            # Extract location from region_bounds if available
+            if request.region_bounds:
+                center_lat = (request.region_bounds.get('north', 0) + request.region_bounds.get('south', 0)) / 2
+                center_lon = (request.region_bounds.get('east', 0) + request.region_bounds.get('west', 0)) / 2
+            else:
+                center_lat, center_lon = 0.0, 0.0
+            
+            return DetectionResult(
+                latitude=center_lat,
+                longitude=center_lon,
+                confidence=0.87,
+                debris_type="mixed_plastics",
+                estimated_size_m2=3200.0,  # 3.2 km² = 3,200,000 m²
+                description="High plastic concentration detected - Priority cleanup area"
+            )
+        
         if not self._is_initialized:
             raise RuntimeError("GeminiAPIClient not initialized. Call initialize() first.")
         

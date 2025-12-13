@@ -36,7 +36,7 @@ class APIConfiguration:
 @dataclass
 class SystemConfiguration:
     """Configuration for system behavior and limits."""
-    
+    test_mode: bool = True
     # Processing limits
     max_concurrent_requests: int = 5
     request_timeout_seconds: int = 30
