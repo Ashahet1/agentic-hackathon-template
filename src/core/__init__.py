@@ -14,6 +14,8 @@ __all__ = [
     'OceanPlasticSentinel',
     'MissionRequest', 
     'MissionResult',
+    'MissionStatus',
+    'MissionType',
     'TaskPlanner',
     'Task',
     'ExecutionPlan', 

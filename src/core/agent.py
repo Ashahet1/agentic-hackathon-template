@@ -20,6 +20,7 @@ Key Design Patterns:
 The coordinator maintains system state, tracks active missions, and provides
 performance metrics for operational monitoring and system optimization.
 """
+from enum import Enum
 import logging
 import asyncio
 from typing import Dict, List, Optional, Any
@@ -35,7 +36,14 @@ from src.integrations.gemini_client import GeminiAPIClient
 
 logger = logging.getLogger(__name__)
 
-
+class MissionStatus(Enum):
+    """Status of a mission execution."""
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    
 @dataclass
 class MissionRequest:
     """

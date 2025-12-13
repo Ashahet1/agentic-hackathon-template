@@ -28,7 +28,13 @@ from src.integrations.gemini_client import GeminiAPIClient
 
 logger = logging.getLogger(__name__)
 
-
+class MissionType(Enum):
+    """Types of missions the system can execute."""
+    STANDARD_DETECTION = "standard_detection"
+    URGENT_CLEANUP = "urgent_cleanup"
+    REGIONAL_SURVEY = "regional_survey"
+    VALIDATION = "validation"
+    
 class TaskType(Enum):
     """
     Types of tasks the system can perform for ocean cleanup operations.
